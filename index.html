@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบบันทึกของหาย</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+<body>
+
+    <div id="login-wrapper">
+        <div id="login-page">
+            <h1>🏫 Lost & Found</h1>
+            <p style="color: var(--text-secondary); margin-top: -20px; margin-bottom: 25px;">ระบบบันทึกของหาย</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">ชื่อผู้ใช้</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">รหัสผ่าน</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn">เข้าสู่ระบบ</button>
+                <p id="login-error" class="hidden">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</p>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden">
+        <header>
+            <h1 id="header-title">ของหายทั้งหมด</h1>
+            <button id="logout-btn" title="ออกจากระบบ">↪️</button>
+        </header>
+        <main>
+            <section id="home-view" class="view">
+                <div id="home-items-grid" class="items-grid"></div>
+            </section>
+            <section id="add-item-view" class="view hidden">
+                 <div id="add-item-form-container">
+                    <form id="add-item-form">
+                        <div class="form-group">
+                            <label for="item-name">สิ่งของที่พบ</label>
+                            <input type="text" id="item-name" placeholder="เช่น โทรศัพท์, กระเป๋าเงิน" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-description">รายละเอียด</label>
+                            <textarea id="item-description" class="form-group input" placeholder="เช่น สีดำ, ยี่ห้อ Samsung" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-location">สถานที่ที่พบ</label>
+                            <input type="text" id="item-location" placeholder="เช่น โรงอาหาร, ใต้อาคาร 3" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-finder">ผู้พบของหาย</label>
+                            <input type="text" id="item-finder" placeholder="เช่น นายสมชาย ใจดี" required>
+                        </div>
+                        <button type="submit" class="btn btn-submit-item">บันทึกข้อมูล</button>
+                    </form>
+                </div>
+            </section>
+            <section id="unclaimed-view" class="view hidden">
+                <div id="unclaimed-items-grid" class="items-grid"></div>
+            </section>
+            <section id="claimed-view" class="view hidden">
+                <div id="claimed-items-grid" class="items-grid"></div>
+            </section>
+
+            <section id="profile-view" class="view hidden">
+                <div id="profile-content">
+                    <h2>ข้อมูลผู้ใช้งาน</h2>
+                    <div class="profile-info-group">
+                        <label>ชื่อผู้ใช้:</label>
+                        <p id="profile-username">admin</p>
+                    </div>
+                    <div class="profile-info-group">
+                        <label>ระดับผู้ใช้งาน:</label>
+                        <p id="profile-role">ผู้ดูแลระบบ</p>
+                    </div>
+                    <div class="profile-info-group">
+                        <label>สถานะ:</label>
+                        <p id="profile-status">ออนไลน์</p>
+                    </div>
+                    
+                </div>
+            </section>
+        </main>
+
+        <nav id="bottom-nav">
+            <button class="nav-btn active" data-view="home-view" data-title="ของหายทั้งหมด">
+                <span class="icon">🏠</span>
+                <span class="label">ทั้งหมด</span>
+            </button>
+            <button class="nav-btn" data-view="unclaimed-view" data-title="ยังไม่มีผู้รับ">
+                <span class="icon">📦</span>
+                <span class="label">ยังไม่รับ</span>
+            </button>
+            <button class="nav-btn" data-view="claimed-view" data-title="รับคืนแล้ว">
+                <span class="icon">✅</span>
+                <span class="label">รับแล้ว</span>
+            </button>
+           <button class="nav-btn" id="profile-btn" data-view="profile-view" data-title="โปรไฟล์">
+                 <span class="icon">👤</span>
+                 <span class="label">โปรไฟล์</span>
+            </button>
+        </nav>
+        
+        <button id="add-item-fab" data-view="add-item-view" data-title="บันทึกของหาย">+</button>
+
+    </div>
+    
+    <div id="modal-overlay" class="modal-overlay hidden"></div>
+    <div id="item-modal" class="modal">
+        <span class="modal-close">&times;</span>
+        <div id="modal-content" class="modal-content"></div>
+    </div>
+
+    <script>
+        // โค้ด JavaScript ทั้งหมดยังคงใช้งานได้เหมือนเดิม
+        // ไม่จำเป็นต้องแก้ไขส่วนนี้
+        // =================================================================
+        // ================ FIREBASE CONFIGURATION =========================
+         const firebaseConfig = {
+  apiKey: "AIzaSyDaDQdwfZb_wtlDV5_0gPCjYBzXn6Gr2jw",
+  authDomain: "testing-e4682.firebaseapp.com",
+  projectId: "testing-e4682",
+  storageBucket: "testing-e4682.firebasestorage.app",
+  messagingSenderId: "729054599488",
+  appId: "1:729054599488:web:d73367a024087a00f382a5",
+  measurementId: "G-S6CLQK5MG3"
+};
+        // =================================================================
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const lostItemsCollection = db.collection("lostItems");
+
+        // --- DOM Elements ---
+        const loginWrapper = document.getElementById('login-wrapper');
+        const mainApp = document.getElementById('main-app');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const logoutBtn = document.getElementById('logout-btn');
+        const headerTitle = document.getElementById('header-title');
+        
+        const bottomNav = document.getElementById('bottom-nav');
+        const navButtons = bottomNav.querySelectorAll('.nav-btn');
+        const fab = document.getElementById('add-item-fab');
+
+        const views = document.querySelectorAll('.view');
+        const addItemForm = document.getElementById('add-item-form');
+        
+        const homeGrid = document.getElementById('home-items-grid');
+        const unclaimedGrid = document.getElementById('unclaimed-items-grid');
+        const claimedGrid = document.getElementById('claimed-items-grid');
+
+        const modalOverlay = document.getElementById('modal-overlay');
+        const itemModal = document.getElementById('item-modal');
+        const modalClose = document.querySelector('.modal-close');
+        const modalContent = document.getElementById('modal-content');
+
+        // --- LOGIN & LOGOUT ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = loginForm.username.value;
+            const password = loginForm.password.value;
+
+            if (username === 'admin' && password === 'admin5555') {
+                loginWrapper.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                loginError.classList.add('hidden');
+                fetchAndDisplayItems();
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+                mainApp.classList.add('hidden');
+                loginWrapper.classList.remove('hidden');
+                loginForm.reset();
+            }
+        });
+
+        // --- NAVIGATION LOGIC ---
+        function switchView(button) {
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            const viewId = button.dataset.view;
+            const title = button.dataset.title;
+
+            headerTitle.textContent = title;
+            views.forEach(view => view.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => switchView(button));
+        });
+
+        fab.addEventListener('click', () => {
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            const viewId = fab.dataset.view;
+            const title = fab.dataset.title;
+            headerTitle.textContent = title;
+            views.forEach(view => view.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        });
+
+
+        // --- ADD ITEM LOGIC ---
+        addItemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            lostItemsCollection.add({
+                name: addItemForm['item-name'].value,
+                description: addItemForm['item-description'].value,
+                location: addItemForm['item-location'].value,
+                finder: addItemForm['item-finder'].value,
+                status: 'unclaimed',
+                foundTimestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                alert('บันทึกข้อมูลสำเร็จ!');
+                addItemForm.reset();
+                document.querySelector('.nav-btn[data-view="home-view"]').click();
+            })
+            .catch((error) => {
+                console.error("Error adding document: ", error);
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+            });
+        });
+
+        // --- FETCH AND DISPLAY ITEMS ---
+        function fetchAndDisplayItems() {
+            lostItemsCollection.orderBy('foundTimestamp', 'desc').onSnapshot(querySnapshot => {
+                homeGrid.innerHTML = '';
+                unclaimedGrid.innerHTML = '';
+                claimedGrid.innerHTML = '';
+
+                if (querySnapshot.empty) {
+                    const placeholder = '<p style="text-align: center; color: var(--text-secondary); margin-top: 30px;">ยังไม่มีรายการ</p>';
+                    homeGrid.innerHTML = placeholder;
+                    unclaimedGrid.innerHTML = placeholder;
+                    claimedGrid.innerHTML = placeholder;
+                }
+                
+                querySnapshot.forEach(doc => {
+                    const item = doc.data();
+                    const itemId = doc.id;
+                    const cardHTML = createItemCard(item, itemId);
+                    homeGrid.innerHTML += cardHTML;
+                    if (item.status === 'unclaimed') {
+                        unclaimedGrid.innerHTML += cardHTML;
+                    } else {
+                        claimedGrid.innerHTML += cardHTML;
+                    }
+                });
+
+                document.querySelectorAll('.item-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                         const id = card.getAttribute('data-id');
+                         showItemDetails(id);
+                    });
+                });
+            });
+        }
+        
+        function getItemIcon(itemName) {
+            const name = itemName.toLowerCase();
+            if (name.includes('โทรศัพท์') || name.includes('phone')) return '📱';
+            if (name.includes('เงิน') || name.includes('บาท') || name.includes('money')) return '💰';
+            if (name.includes('กระเป๋า')) return '👜';
+            if (name.includes('กุญแจ')) return '🔑';
+            if (name.includes('หูฟัง')) return '🎧';
+            if (name.includes('หนังสือ')) return '📚';
+            if (name.includes('บัตร')) return '💳';
+            return '❓';
+        }
+
+        function createItemCard(item, id) {
+            const icon = getItemIcon(item.name);
+            return `
+                <div class="item-card" data-id="${id}">
+                    <div class="icon">${icon}</div>
+                    <div class="info">
+                        <h3>${item.name}</h3>
+                        <p>${item.location || 'ไม่ระบุสถานที่'}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- MODAL LOGIC ---
+        function showItemDetails(itemId) {
+            lostItemsCollection.doc(itemId).get().then(doc => {
+                if (doc.exists) {
+                    const item = doc.data();
+                    const foundTime = item.foundTimestamp ? new Date(item.foundTimestamp.seconds * 1000).toLocaleString('th-TH') : 'ไม่ระบุ';
+                    
+                    let modalHTML = `
+                        <h3><span class="icon">${getItemIcon(item.name)}</span> ${item.name}</h3>
+                        <p><strong>รายละเอียด:</strong> ${item.description}</p>
+                        <p><strong>สถานที่พบ:</strong> ${item.location}</p>
+                        <p><strong>ผู้ที่พบ:</strong> ${item.finder}</p>
+                        <p><strong>เวลาที่พบ:</strong> ${foundTime}</p>
+                        <p><strong>สถานะ:</strong> ${item.status === 'unclaimed' ? 'ยังไม่มีผู้รับ' : 'รับคืนแล้ว'}</p>
+                    `;
+                    
+                    if (item.status === 'unclaimed') {
+                         modalHTML += `
+                         <div class="modal-actions">
+                            <button class="btn-claim" onclick="markAsClaimed('${itemId}')">ยืนยันการรับคืน</button>
+                         </div>
+                         `;
+                    }
+                    
+                    modalContent.innerHTML = modalHTML;
+                    modalOverlay.classList.remove('hidden');
+                    itemModal.classList.add('visible');
+                }
+            });
+        }
+        
+        function markAsClaimed(itemId) {
+            if(confirm('คุณต้องการยืนยันว่าของชิ้นนี้มีผู้รับคืนแล้วใช่หรือไม่?')) {
+                lostItemsCollection.doc(itemId).update({ status: 'claimed' })
+                .then(() => {
+                    alert('อัปเดตสถานะเรียบร้อย');
+                    closeModal();
+                })
+                .catch(error => console.error("Error updating document: ", error));
+            }
+        }
+
+        function closeModal() {
+            itemModal.classList.remove('visible');
+            modalOverlay.classList.add('hidden');
+        }
+
+        modalOverlay.addEventListener('click', closeModal);
+        modalClose.addEventListener('click', closeModal);
+
+        fab.addEventListener('click', () => {
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            const viewId = fab.dataset.view;
+            const title = fab.dataset.title;
+            headerTitle.textContent = title;
+            views.forEach(view => view.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        });
+    </script>
+</body>
+</html>

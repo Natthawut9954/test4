@@ -1,0 +1,360 @@
+/* --- Modern UI/UX Style by Gemini (v2 - Improved Layout) --- */
+:root {
+    --primary-color: #007AFF; 
+    --secondary-color: #FF3B30;
+    --accent-color: #34C759;
+    --fab-color: #FF9500;
+    
+    --background-color: #F2F2F7;
+    --card-background: #FFFFFF;
+    --text-primary: #1C1C1E;
+    --text-secondary: #8A8A8E;
+    --separator-color: #E5E5EA;
+
+    --border-radius-card: 16px;
+    --border-radius-btn: 12px;
+    --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Kanit', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    line-height: 1.5;
+    overflow: hidden; 
+}
+
+.hidden { display: none !important; }
+
+/* --- Main App Layout --- */
+#login-wrapper, #main-app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#login-wrapper {
+    justify-content: center;
+    padding: 20px;
+}
+
+/* --- Login Page --- */
+#login-page {
+    background: var(--card-background);
+    padding: 30px;
+    border-radius: var(--border-radius-card);
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+#login-page h1 { color: var(--primary-color); }
+.form-group { margin-bottom: 15px; text-align: left; }
+.form-group label { font-weight: 500; margin-bottom: 8px; display: block; }
+.form-group input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--separator-color);
+    border-radius: var(--border-radius-btn);
+    font-size: 16px;
+    background-color: #F8F8F8;
+}
+.form-group input:focus { outline: 2px solid var(--primary-color); }
+.btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: var(--border-radius-btn);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: white;
+}
+#login-error { color: var(--secondary-color); margin-top: 15px; }
+
+/* --- App Header --- */
+header {
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--separator-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+#header-title { font-size: 20px; font-weight: 600; }
+#logout-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    color: var(--secondary-color);
+}
+
+/* --- Main Content --- */
+main {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    padding-bottom: 100px; 
+}
+
+.items-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+/* --- Modern Item Card --- */
+.item-card {
+    background: var(--card-background);
+    border-radius: var(--border-radius-card);
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: var(--shadow-subtle);
+    transition: transform 0.2s ease;
+}
+.item-card:active {
+    transform: scale(0.97);
+}
+.item-card .icon {
+    font-size: 28px;
+    background-color: var(--background-color);
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+}
+.item-card .info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+.item-card h3 {
+    font-size: 17px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.item-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ======================================================== */
+/* ============= ⭐️ IMPROVED BOTTOM NAVIGATION ============== */
+/* ======================================================== */
+#bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 85px; /* ความสูงรวม Safe Area ด้านล่าง */
+    padding-bottom: 25px; /* Safe Area สำหรับ iPhone */
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--separator-color);
+    display: grid;
+    /* แบ่งเป็น 4 ส่วนเท่าๆ กันสำหรับปุ่มเมนู */
+    grid-template-columns: repeat(4, 1fr); 
+    align-items: flex-start; /* จัดชิดบน */
+    padding-top: 10px;
+    z-index: 100;
+}
+.nav-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    font-family: 'Kanit', sans-serif;
+    font-size: 12px;
+}
+.nav-btn .icon { font-size: 24px; }
+.nav-btn.active { color: var(--primary-color); }
+
+/* --- Floating Action Button (FAB) with Notch Effect --- */
+#add-item-fab {
+    /* ✨ การจัดตำแหน่ง FAB */
+    position: fixed;
+    z-index: 101; /* อยู่เหนือ Nav Bar */
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 40px; /* ปรับตำแหน่งตามความสูงของ Nav Bar */
+    
+    /* ✨ ดีไซน์ปุ่ม */
+    background: linear-gradient(45deg, var(--fab-color), #FFB900);
+    color: white;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    font-size: 32px;
+    font-weight: 300;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(255, 149, 0, 0.4);
+    
+    /* ✨ เทคนิคสร้าง Notch (ส่วนเว้า) */
+    /* สร้างขอบสีเดียวกับพื้นหลังของหน้าจอ */
+    border: 5px solid var(--background-color); 
+}
+
+
+/* --- Add Item Form --- */
+#add-item-form-container {
+    padding: 10px;
+}
+#add-item-form-container .form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+.btn-submit-item {
+    background-color: var(--accent-color);
+}
+
+/* --- Modal --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 200;
+}
+.modal {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: var(--card-background);
+    padding: 20px;
+    padding-top: 40px;
+    border-radius: var(--border-radius-card) var(--border-radius-card) 0 0;
+    z-index: 201;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+}
+.modal.visible {
+    transform: translateY(0);
+}
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 28px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.modal-content h3 { color: var(--primary-color); font-size: 20px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+.modal-content p { margin-bottom: 12px; color: var(--text-secondary); }
+.modal-content strong { color: var(--text-primary); font-weight: 500; }
+.modal-actions .btn-claim {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: var(--border-radius-btn);
+    background-color: var(--accent-color);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+}
+/* styles.css */
+
+/* ส่วนสำหรับ Profile View */
+#profile-view {
+    padding: 20px;
+    background-color: var(--background-color); /* ใช้สีพื้นหลังเดียวกับ main-app */
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    max-width: 600px; /* จำกัดความกว้างเพื่อให้อ่านง่ายขึ้น */
+    margin: 20px auto; /* จัดกึ่งกลาง */
+}
+
+#profile-content h2 {
+    color: var(--primary-color);
+    margin-bottom: 25px;
+    font-weight: 600;
+    text-align: center;
+}
+
+#profile-content h3 {
+    color: var(--text-color);
+    margin-top: 30px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.profile-info-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: var(--card-background); /* ใช้สีพื้นหลังของการ์ด */
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.profile-info-group label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    width: 120px; /* กำหนดความกว้างเพื่อจัดแนว */
+    flex-shrink: 0;
+}
+
+.profile-info-group p {
+    margin: 0;
+    color: var(--text-color);
+    flex-grow: 1;
+}
+
+/* ปุ่มสำหรับ Profile View */
+#profile-content .btn-secondary {
+    background-color: var(--button-secondary-background);
+    color: var(--button-secondary-text);
+    border: 1px solid var(--button-secondary-border);
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    width: 100%;
+    margin-bottom: 10px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+#profile-content .btn-secondary:hover {
+    background-color: var(--button-secondary-hover-background);
+    border-color: var(--button-secondary-hover-border);
+}
