@@ -216,26 +216,7 @@
 
 
         // --- ADD ITEM LOGIC ---
-        addItemForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            lostItemsCollection.add({
-                name: addItemForm['item-name'].value,
-                description: addItemForm['item-description'].value,
-                location: addItemForm['item-location'].value,
-                finder: addItemForm['item-finder'].value,
-                status: 'unclaimed',
-                foundTimestamp: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then(() => {
-                alert('บันทึกข้อมูลสำเร็จ!');
-                addItemForm.reset();
-                document.querySelector('.nav-btn[data-view="home-view"]').click();
-            })
-            .catch((error) => {
-                console.error("Error adding document: ", error);
-                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-            });
-        });
+        
 
         // --- FETCH AND DISPLAY ITEMS ---
         function fetchAndDisplayItems() {
@@ -274,7 +255,7 @@
         
         function getItemIcon(itemName) {
             const name = itemName.toLowerCase();
-            if (name.includes('โทรศัพท์') || name.includes('phone')) return '📱';
+            if (name.includes('โทรศัพท์มือถือ') || name.includes('phone')) return '📱';
             if (name.includes('เงิน') || name.includes('บาท') || name.includes('money')) return '💰';
             if (name.includes('กระเป๋า')) return '👜';
             if (name.includes('กุญแจ')) return '🔑';
@@ -297,7 +278,7 @@
             `;
         }
 
-        // --- MODAL LOGIC ---
+      // --- MODAL LOGIC ---
         function showItemDetails(itemId) {
             lostItemsCollection.doc(itemId).get().then(doc => {
                 if (doc.exists) {
@@ -327,18 +308,44 @@
                 }
             });
         }
-        
-        function markAsClaimed(itemId) {
-            if(confirm('คุณต้องการยืนยันว่าของชิ้นนี้มีผู้รับคืนแล้วใช่หรือไม่?')) {
-                lostItemsCollection.doc(itemId).update({ status: 'claimed' })
-                .then(() => {
-                    alert('อัปเดตสถานะเรียบร้อย');
-                    closeModal();
-                })
-                .catch(error => console.error("Error updating document: ", error));
-            }
-        }
+        // NEW: Function to show a confirmation modal
+        function showConfirmModal(title, message, onConfirmCallback) {
+            modalContent.innerHTML = `
+                <h3 style="color: var(--text-color); text-align: center; margin-bottom: 20px;">${title}</h3>
+                <p style="text-align: center; margin-bottom: 30px;">${message}</p>
+                <div class="modal-actions" style="text-align: center; display: flex; justify-content: center; gap: 15px;">
+                    <button class="btn btn-secondary" id="confirm-cancel-btn">ไม่ใช่</button>
+                    <button class="btn btn-primary" id="confirm-ok-btn">ใช่</button>
+                </div>
+            `;
+            modalOverlay.classList.remove('hidden');
+            itemModal.classList.add('visible');
 
+            document.getElementById('confirm-ok-btn').onclick = () => {
+                closeModal();
+                onConfirmCallback(); // Execute the callback if confirmed
+            };
+
+            document.getElementById('confirm-cancel-btn').onclick = () => {
+                closeModal();
+            };
+        }
+       function markAsClaimed(itemId) {
+            showConfirmModal(
+                'ยืนยันการรับคืน',
+                'คุณต้องการยืนยันว่าของชิ้นนี้มีผู้รับคืนแล้วใช่หรือไม่?',
+                () => { // This is the callback function if 'ใช่' is clicked
+                    lostItemsCollection.doc(itemId).update({ status: 'claimed' })
+                    .then(() => {
+                        showInfoModal('สำเร็จ!', 'สถานะสิ่งของถูกอัปเดตเรียบร้อยแล้ว.', 'success');
+                    })
+                    .catch(error => {
+                        console.error("Error updating document: ", error);
+                        showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถอัปเดตสถานะสิ่งของได้: ' + error.message, 'error');
+                    });
+                }
+            );
+        }
         function closeModal() {
             itemModal.classList.remove('visible');
             modalOverlay.classList.add('hidden');
@@ -347,6 +354,56 @@
         modalOverlay.addEventListener('click', closeModal);
         modalClose.addEventListener('click', closeModal);
 
+        // --- NEW: Function to show a generic info modal ---
+        function showInfoModal(title, message, type = 'info') {
+            let icon = '';
+            let titleColor = '';
+
+            if (type === 'success') {
+                icon = '✅';
+                titleColor = 'var(--primary-color)'; // สีเขียว
+            } else if (type === 'error') {
+                icon = '❌';
+                titleColor = 'var(--error-color)'; // สีแดง
+            } else {
+                icon = 'ℹ️';
+                titleColor = 'var(--text-color)'; // สีข้อความหลัก
+            }
+
+            modalContent.innerHTML = `
+                <h3 style="color: ${titleColor}; text-align: center; display: block;">${icon} ${title}</h3>
+                <p style="text-align: center; margin-bottom: 25px;">${message}</p>
+                <div class="modal-actions" style="text-align: center;">
+                    <button class="btn btn-primary" onclick="closeModal()">ตกลง</button>
+                </div>
+            `;
+            modalOverlay.classList.remove('hidden');
+            itemModal.classList.add('visible');
+        }
+        // --- ADD ITEM LOGIC ---
+        addItemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            lostItemsCollection.add({
+                name: addItemForm['item-name'].value,
+                description: addItemForm['item-description'].value,
+                location: addItemForm['item-location'].value,
+                finder: addItemForm['item-finder'].value,
+                status: 'unclaimed',
+                foundTimestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                // แทนที่ alert('บันทึกข้อมูลสำเร็จ!'); ด้วย Pop-up สวยงาม
+                showInfoModal('สำเร็จ!', 'บันทึกข้อมูลสิ่งของหายเรียบร้อยแล้ว.', 'success');
+                addItemForm.reset();
+                // ไม่ต้องกดปุ่ม home-view ทันที เพราะผู้ใช้อาจอยากอ่าน Pop-up ก่อน
+                // document.querySelector('.nav-btn[data-view="home-view"]').click();
+            })
+            .catch((error) => {
+                console.error("Error adding document: ", error);
+                // แทนที่ alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล'); ด้วย Pop-up สวยงาม
+                showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
+            });
+        });
         fab.addEventListener('click', () => {
             navButtons.forEach(btn => btn.classList.remove('active'));
             const viewId = fab.dataset.view;
@@ -356,5 +413,6 @@
             document.getElementById(viewId).classList.remove('hidden');
         });
     </script>
+    
 </body>
 </html>
