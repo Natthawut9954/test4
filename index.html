@@ -13,10 +13,10 @@
 </head>
 <body>
 
-    <div id="login-wrapper">
+    <div id="login-modal-wrapper" class="hidden">
         <div id="login-page">
             <h1>🏫 Lost & Found</h1>
-            <p style="color: var(--text-secondary); margin-top: -20px; margin-bottom: 25px;">ระบบบันทึกของหาย</p>
+            <p style="color: var(--text-secondary); margin-top: -20px; margin-bottom: 25px;">เข้าสู่ระบบจัดการข้อมูล</p>
             <form id="login-form">
                 <div class="form-group">
                     <label for="username">ชื่อผู้ใช้</label>
@@ -28,20 +28,19 @@
                 </div>
                 <button type="submit" class="btn">เข้าสู่ระบบ</button>
                 <p id="login-error" class="hidden">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</p>
+                <button type="button" class="btn" id="cancel-login-btn" style="background-color: var(--text-secondary); margin-top: 10px;">ยกเลิก</button>
             </form>
         </div>
     </div>
 
-    <div id="main-app" class="hidden">
+    <div id="main-app">
         <header>
-            <h1 id="header-title">ของหายทั้งหมด</h1>
-            <button id="logout-btn" title="ออกจากระบบ">↪️</button>
+            <h1 id="header-title">บันทึกของหาย</h1>
+            <button id="login-trigger-btn" title="เข้าสู่ระบบ" style="background: none; border: none; cursor: pointer; font-size: 24px; color: var(--primary-color);">🔑</button>
+            <button id="logout-btn" title="ออกจากระบบ" class="hidden">↪️</button>
         </header>
         <main>
-            <section id="home-view" class="view">
-                <div id="home-items-grid" class="items-grid"></div>
-            </section>
-            <section id="add-item-view" class="view hidden">
+            <section id="add-item-view" class="view">
                  <div id="add-item-form-container">
                     <form id="add-item-form">
                         <div class="form-group">
@@ -62,7 +61,12 @@
                         </div>
                         <button type="submit" class="btn btn-submit-item">บันทึกข้อมูล</button>
                     </form>
-                </div>
+                    <a href="public_view.html" class="btn" style="margin-top: 20px; text-align: center; display: block; background-color: blue;">ดูรายการของหายทั้งหมด</a>
+                 </div>
+            </section>
+            
+            <section id="home-view" class="view hidden">
+                <div id="home-items-grid" class="items-grid"></div>
             </section>
             <section id="unclaimed-view" class="view hidden">
                 <div id="unclaimed-items-grid" class="items-grid"></div>
@@ -86,13 +90,12 @@
                         <label>สถานะ:</label>
                         <p id="profile-status">ออนไลน์</p>
                     </div>
-                    
                 </div>
             </section>
         </main>
 
-        <nav id="bottom-nav">
-            <button class="nav-btn active" data-view="home-view" data-title="ของหายทั้งหมด">
+        <nav id="bottom-nav" class="hidden">
+            <button class="nav-btn" data-view="home-view" data-title="ของหายทั้งหมด">
                 <span class="icon">🏠</span>
                 <span class="label">ทั้งหมด</span>
             </button>
@@ -110,8 +113,7 @@
             </button>
         </nav>
         
-        <button id="add-item-fab" data-view="add-item-view" data-title="บันทึกของหาย">+</button>
-
+        <button id="add-item-fab" data-view="add-item-view" data-title="บันทึกของหาย" class="hidden">+</button>
     </div>
     
     <div id="modal-overlay" class="modal-overlay hidden"></div>
@@ -121,19 +123,16 @@
     </div>
 
     <script>
-        // โค้ด JavaScript ทั้งหมดยังคงใช้งานได้เหมือนเดิม
-        // ไม่จำเป็นต้องแก้ไขส่วนนี้
-        // =================================================================
         // ================ FIREBASE CONFIGURATION =========================
          const firebaseConfig = {
-  apiKey: "AIzaSyDaDQdwfZb_wtlDV5_0gPCjYBzXn6Gr2jw",
-  authDomain: "testing-e4682.firebaseapp.com",
-  projectId: "testing-e4682",
-  storageBucket: "testing-e4682.firebasestorage.app",
-  messagingSenderId: "729054599488",
-  appId: "1:729054599488:web:d73367a024087a00f382a5",
-  measurementId: "G-S6CLQK5MG3"
-};
+            apiKey: "AIzaSyDaDQdwfZb_wtlDV5_0gPCjYBzXn6Gr2jw",
+            authDomain: "testing-e4682.firebaseapp.com",
+            projectId: "testing-e4682",
+            storageBucket: "testing-e4682.firebasestorage.app",
+            messagingSenderId: "729054599488",
+            appId: "1:729054599488:web:d73367a024087a00f382a5",
+            measurementId: "G-S6CLQK5MG3"
+        };
         // =================================================================
 
         firebase.initializeApp(firebaseConfig);
@@ -141,11 +140,13 @@
         const lostItemsCollection = db.collection("lostItems");
 
         // --- DOM Elements ---
-        const loginWrapper = document.getElementById('login-wrapper');
+        const loginModalWrapper = document.getElementById('login-modal-wrapper');
         const mainApp = document.getElementById('main-app');
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
+        const loginTriggerBtn = document.getElementById('login-trigger-btn');
         const logoutBtn = document.getElementById('logout-btn');
+        const cancelLoginBtn = document.getElementById('cancel-login-btn');
         const headerTitle = document.getElementById('header-title');
         
         const bottomNav = document.getElementById('bottom-nav');
@@ -164,17 +165,43 @@
         const modalClose = document.querySelector('.modal-close');
         const modalContent = document.getElementById('modal-content');
 
-        // --- LOGIN & LOGOUT ---
+        // --- State Variable ---
+        let isLoggedIn = false;
+
+        // --- Initial View Setup (Public Add Item Form) ---
+        showView('add-item-view', 'บันทึกของหาย');
+        updateUIForAuthState(); // Call to set initial UI state
+
+        // --- Event Listeners for Login/Logout ---
+        loginTriggerBtn.addEventListener('click', () => {
+            loginModalWrapper.classList.remove('hidden');
+            modalOverlay.classList.remove('hidden');
+            mainApp.classList.add('hidden'); // ซ่อน main-app เมื่อหน้าล็อกอินแสดง
+        });
+
+        cancelLoginBtn.addEventListener('click', () => {
+            loginModalWrapper.classList.add('hidden');
+            modalOverlay.classList.add('hidden');
+            loginForm.reset();
+            loginError.classList.add('hidden');
+            mainApp.classList.remove('hidden'); // แสดง main-app กลับมาเมื่อยกเลิก
+        });
+
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const username = loginForm.username.value;
             const password = loginForm.password.value;
 
             if (username === 'admin' && password === 'admin5555') {
-                loginWrapper.classList.add('hidden');
-                mainApp.classList.remove('hidden');
+                isLoggedIn = true;
+                loginModalWrapper.classList.add('hidden');
+                modalOverlay.classList.add('hidden');
                 loginError.classList.add('hidden');
-                fetchAndDisplayItems();
+                mainApp.classList.remove('hidden'); // แสดง main-app กลับมาเมื่อล็อกอินสำเร็จ
+                updateUIForAuthState();
+                fetchAndDisplayItems(); // Fetch data for admin
+                showView('home-view', 'ของหายทั้งหมด'); // Switch to admin default view
+                document.querySelector('.nav-btn[data-view="home-view"]').classList.add('active'); // Set active class for home
             } else {
                 loginError.classList.remove('hidden');
             }
@@ -182,43 +209,74 @@
 
         logoutBtn.addEventListener('click', () => {
             if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-                mainApp.classList.add('hidden');
-                loginWrapper.classList.remove('hidden');
+                isLoggedIn = false;
+                updateUIForAuthState();
+                showView('add-item-view', 'บันทึกของหาย'); // Go back to public add form
                 loginForm.reset();
             }
         });
 
-        // --- NAVIGATION LOGIC ---
-        function switchView(button) {
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            
-            const viewId = button.dataset.view;
-            const title = button.dataset.title;
+        // --- UI Update Function based on Login State ---
+        function updateUIForAuthState() {
+            if (isLoggedIn) {
+                loginTriggerBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                bottomNav.classList.remove('hidden');
+                fab.classList.remove('hidden');
+            } else {
+                loginTriggerBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                bottomNav.classList.add('hidden');
+                fab.classList.add('hidden');
+                navButtons.forEach(btn => btn.classList.remove('active')); // Clear active state
+            }
+        }
 
+        // --- NAVIGATION LOGIC ---
+        function showView(viewId, title) {
             headerTitle.textContent = title;
             views.forEach(view => view.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
         }
 
         navButtons.forEach(button => {
-            button.addEventListener('click', () => switchView(button));
+            button.addEventListener('click', () => {
+                navButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                const viewId = button.dataset.view;
+                const title = button.dataset.title;
+                showView(viewId, title);
+            });
         });
 
         fab.addEventListener('click', () => {
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            const viewId = fab.dataset.view;
-            const title = fab.dataset.title;
-            headerTitle.textContent = title;
-            views.forEach(view => view.classList.add('hidden'));
-            document.getElementById(viewId).classList.remove('hidden');
+            navButtons.forEach(btn => btn.classList.remove('active')); // Clear active nav button
+            showView(fab.dataset.view, fab.dataset.title);
         });
 
+        // --- ADD ITEM LOGIC (Public Access) ---
+        addItemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            lostItemsCollection.add({
+                name: addItemForm['item-name'].value,
+                description: addItemForm['item-description'].value,
+                location: addItemForm['item-location'].value,
+                finder: addItemForm['item-finder'].value,
+                status: 'unclaimed',
+                foundTimestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                showInfoModal('สำเร็จ!', 'บันทึกข้อมูลสิ่งของหายเรียบร้อยแล้ว.', 'success');
+                addItemForm.reset();
+            })
+            .catch((error) => {
+                console.error("Error adding document: ", error);
+                showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
+            });
+        });
 
-        // --- ADD ITEM LOGIC ---
-        
-
-        // --- FETCH AND DISPLAY ITEMS ---
+        // --- FETCH AND DISPLAY ITEMS (Admin Only) ---
+        // This function will only be called when logged in
         function fetchAndDisplayItems() {
             lostItemsCollection.orderBy('foundTimestamp', 'desc').onSnapshot(querySnapshot => {
                 homeGrid.innerHTML = '';
@@ -246,8 +304,13 @@
 
                 document.querySelectorAll('.item-card').forEach(card => {
                     card.addEventListener('click', () => {
-                         const id = card.getAttribute('data-id');
-                         showItemDetails(id);
+                         // Only show details if logged in
+                         if (isLoggedIn) { 
+                            const id = card.getAttribute('data-id');
+                            showItemDetails(id);
+                         } else {
+                            showInfoModal('ไม่อนุญาต', 'โปรดเข้าสู่ระบบเพื่อดูรายละเอียดและจัดการสิ่งของ.', 'error');
+                         }
                     });
                 });
             });
@@ -380,38 +443,6 @@
             modalOverlay.classList.remove('hidden');
             itemModal.classList.add('visible');
         }
-        // --- ADD ITEM LOGIC ---
-        addItemForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            lostItemsCollection.add({
-                name: addItemForm['item-name'].value,
-                description: addItemForm['item-description'].value,
-                location: addItemForm['item-location'].value,
-                finder: addItemForm['item-finder'].value,
-                status: 'unclaimed',
-                foundTimestamp: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then(() => {
-                // แทนที่ alert('บันทึกข้อมูลสำเร็จ!'); ด้วย Pop-up สวยงาม
-                showInfoModal('สำเร็จ!', 'บันทึกข้อมูลสิ่งของหายเรียบร้อยแล้ว.', 'success');
-                addItemForm.reset();
-                // ไม่ต้องกดปุ่ม home-view ทันที เพราะผู้ใช้อาจอยากอ่าน Pop-up ก่อน
-                // document.querySelector('.nav-btn[data-view="home-view"]').click();
-            })
-            .catch((error) => {
-                console.error("Error adding document: ", error);
-                // แทนที่ alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล'); ด้วย Pop-up สวยงาม
-                showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
-            });
-        });
-        fab.addEventListener('click', () => {
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            const viewId = fab.dataset.view;
-            const title = fab.dataset.title;
-            headerTitle.textContent = title;
-            views.forEach(view => view.classList.add('hidden'));
-            document.getElementById(viewId).classList.remove('hidden');
-        });
     </script>
     
 </body>

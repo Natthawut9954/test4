@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ของหายทั้งหมด</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+<body>
+
+    <div id="public-app">
+        <header>
+            <h1 id="header-title">รายการของหาย</h1>
+            <button id="back-to-home-btn" title="กลับหน้าหลัก">🏠</button>
+        </header>
+        <main>
+            <section id="public-view" class="view">
+                <div class="count-display">
+                    <p>จำนวนสิ่งของที่พบทั้งหมด:</p>
+                    <h2 id="item-count">0 รายการ</h2>
+                </div>
+                <h3>รายการสิ่งของ</h3>
+                <div id="public-items-grid" class="items-grid">
+                    </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay hidden"></div>
+    <div id="item-modal" class="modal">
+        <span class="modal-close">&times;</span>
+        <div id="modal-content" class="modal-content"></div>
+    </div>
+
+    <script>
+        // ================ FIREBASE CONFIGURATION =========================
+         const firebaseConfig = {
+            apiKey: "AIzaSyDaDQdwfZb_wtlDV5_0gPCjYBzXn6Gr2jw",
+            authDomain: "testing-e4682.firebaseapp.com",
+            projectId: "testing-e4682",
+            storageBucket: "testing-e4682.firebasestorage.app",
+            messagingSenderId: "729054599488",
+            appId: "1:729054599488:web:d73367a024087a00f382a5",
+            measurementId: "G-S6CLQK5MG3"
+        };
+        // =================================================================
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const lostItemsCollection = db.collection("lostItems");
+
+        // --- DOM Elements ---
+        const itemCountDisplay = document.getElementById('item-count');
+        const publicItemsGrid = document.getElementById('public-items-grid');
+        const backToHomeBtn = document.getElementById('back-to-home-btn');
+
+        const modalOverlay = document.getElementById('modal-overlay');
+        const itemModal = document.getElementById('item-modal');
+        const modalClose = document.querySelector('.modal-close');
+        const modalContent = document.getElementById('modal-content');
+
+        // --- Event Listeners ---
+        backToHomeBtn.addEventListener('click', () => {
+            window.location.href = 'index.html'; // Navigate back to the main login/add item page
+        });
+
+        // --- Fetch and Display Public Items ---
+        function fetchAndDisplayPublicItems() {
+            lostItemsCollection.orderBy('foundTimestamp', 'desc').onSnapshot(querySnapshot => {
+                publicItemsGrid.innerHTML = '';
+                itemCountDisplay.textContent = `${querySnapshot.size} รายการ`; // Update count
+
+                if (querySnapshot.empty) {
+                    publicItemsGrid.innerHTML = '<p style="text-align: center; color: var(--text-secondary); margin-top: 30px;">ยังไม่มีรายการของหายในระบบ</p>';
+                }
+                
+                querySnapshot.forEach(doc => {
+                    const item = doc.data();
+                    const itemId = doc.id;
+                    const cardHTML = createItemCard(item, itemId);
+                    publicItemsGrid.innerHTML += cardHTML;
+                });
+
+                document.querySelectorAll('.item-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                         const id = card.getAttribute('data-id');
+                         showItemDetails(id); // Allow public to see details
+                    });
+                });
+            });
+        }
+        
+        function getItemIcon(itemName) {
+            const name = itemName.toLowerCase();
+            if (name.includes('โทรศัพท์มือถือ') || name.includes('phone')) return '📱';
+            if (name.includes('เงิน') || name.includes('บาท') || name.includes('money')) return '💰';
+            if (name.includes('กระเป๋า')) return '👜';
+            if (name.includes('กุญแจ')) return '🔑';
+            if (name.includes('หูฟัง')) return '🎧';
+            if (name.includes('หนังสือ')) return '📚';
+            if (name.includes('บัตร')) return '💳';
+            return '❓';
+        }
+
+        function createItemCard(item, id) {
+            const icon = getItemIcon(item.name);
+            return `
+                <div class="item-card" data-id="${id}">
+                    <div class="icon">${icon}</div>
+                    <div class="info">
+                        <h3>${item.name}</h3>
+                        <p>${item.location || 'ไม่ระบุสถานที่'}</p>
+                    </div>
+                    <div class="status-badge status-${item.status}">${item.status === 'unclaimed' ? 'ยังไม่มีผู้รับ' : 'รับคืนแล้ว'}</div>
+                </div>
+            `;
+        }
+
+        // --- MODAL LOGIC (for item details in public view) ---
+        function showItemDetails(itemId) {
+            lostItemsCollection.doc(itemId).get().then(doc => {
+                if (doc.exists) {
+                    const item = doc.data();
+                    const foundTime = item.foundTimestamp ? new Date(item.foundTimestamp.seconds * 1000).toLocaleString('th-TH') : 'ไม่ระบุ';
+                    
+                    let modalHTML = `
+                        <h3><span class="icon">${getItemIcon(item.name)}</span> ${item.name}</h3>
+                        <p><strong>รายละเอียด:</strong> ${item.description}</p>
+                        <p><strong>สถานที่พบ:</strong> ${item.location}</p>
+                        <p><strong>ผู้ที่พบ:</strong> ${item.finder}</p>
+                        <p><strong>เวลาที่พบ:</strong> ${foundTime}</p>
+                        <p><strong>สถานะ:</strong> ${item.status === 'unclaimed' ? 'ยังไม่มีผู้รับ' : 'รับคืนแล้ว'}</p>
+                        <p style="margin-top: 15px; font-size: 0.9em; color: var(--text-secondary);">โปรดติดต่อผู้ดูแลระบบเพื่อรับสิ่งของคืน</p>
+                    `;
+                    
+                    modalContent.innerHTML = modalHTML;
+                    modalOverlay.classList.remove('hidden');
+                    itemModal.classList.add('visible');
+                }
+            });
+        }
+        
+        function closeModal() {
+            itemModal.classList.remove('visible');
+            modalOverlay.classList.add('hidden');
+        }
+
+        modalOverlay.addEventListener('click', closeModal);
+        modalClose.addEventListener('click', closeModal);
+
+        // Initial fetch when the page loads
+        fetchAndDisplayPublicItems();
+    </script>
+    
+</body>
+</html>
