@@ -413,3 +413,30 @@ main {
     margin-bottom: 8px; /* ระยะห่างระหว่าง icon กับ text */
     font-size: 2em; /* ไอคอนใหญ่ขึ้น */
 }
+/* สีสำหรับปุ่มทั่วไปในระบบ */
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+/* ปุ่มหลัก เช่น "บันทึกข้อมูล" */
+.btn-submit-item {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* ปุ่มรอง เช่น "ยกเลิก" (สีเทา) */
+.btn-secondary {
+    background-color: var(--text-secondary); /* สามารถเปลี่ยนเป็นสีเทาตามที่ต้องการ */
+    color: white;
+}
+
+/* ปุ่มสำหรับแจ้งเตือน เช่น "ลบ" (สีแดง) */
+.btn-danger {
+    background-color: var(--error-color); /* สามารถเปลี่ยนเป็นสีแดงตามที่ต้องการ */
+    color: white;
+}

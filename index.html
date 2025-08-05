@@ -114,6 +114,7 @@
         </nav>
         
         <button id="add-item-fab" data-view="add-item-view" data-title="บันทึกของหาย" class="hidden">+</button>
+        
     </div>
     
     <div id="modal-overlay" class="modal-overlay hidden"></div>
@@ -443,6 +444,66 @@
             modalOverlay.classList.remove('hidden');
             itemModal.classList.add('visible');
         }
+
+        // Function to handle editing an item
+function editItem(itemId) {
+    // Implement logic to retrieve the item data and show an edit form.
+    // For example, you can reuse the addItemForm and pre-populate it
+    // with the current item data, then change the submit button to an "Update" button.
+    alert('ยังไม่ได้สร้างฟังก์ชันแก้ไข');
+    // ... code to show edit form and update Firestore
+}
+
+// Function to handle deleting an item
+function deleteItem(itemId) {
+    showConfirmModal(
+        'ยืนยันการลบ',
+        'คุณต้องการลบรายการนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถยกเลิกได้',
+        () => { // This is the callback function if 'ใช่' is clicked
+            lostItemsCollection.doc(itemId).delete()
+            .then(() => {
+                showInfoModal('สำเร็จ!', 'ลบรายการสิ่งของเรียบร้อยแล้ว.', 'success');
+            })
+            .catch(error => {
+                console.error("Error removing document: ", error);
+                showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถลบรายการได้: ' + error.message, 'error');
+            });
+        }
+    );
+}
+
+function showItemDetails(itemId) {
+    lostItemsCollection.doc(itemId).get().then(doc => {
+        if (doc.exists) {
+            const item = doc.data();
+            const foundTime = item.foundTimestamp ? new Date(item.foundTimestamp.seconds * 1000).toLocaleString('th-TH') : 'ไม่ระบุ';
+            
+            let modalHTML = `
+                <h3><span class="icon">${getItemIcon(item.name)}</span> ${item.name}</h3>
+                <p><strong>รายละเอียด:</strong> ${item.description}</p>
+                <p><strong>สถานที่พบ:</strong> ${item.location}</p>
+                <p><strong>ผู้ที่พบ:</strong> ${item.finder}</p>
+                <p><strong>เวลาที่พบ:</strong> ${foundTime}</p>
+                <p><strong>สถานะ:</strong> ${item.status === 'unclaimed' ? 'ยังไม่มีผู้รับ' : 'รับคืนแล้ว'}</p>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="editItem('${itemId}')">แก้ไข</button>
+                    <button class="btn btn-danger" onclick="deleteItem('${itemId}')">ลบ</button>
+            `;
+            
+            if (item.status === 'unclaimed') {
+                 modalHTML += `
+                    <button class="btn btn-primary" onclick="markAsClaimed('${itemId}')">ยืนยันการรับคืน</button>
+                 `;
+            }
+
+            modalHTML += `</div>`;
+            
+            modalContent.innerHTML = modalHTML;
+            modalOverlay.classList.remove('hidden');
+            itemModal.classList.add('visible');
+        }
+    });
+}
     </script>
     
 </body>
