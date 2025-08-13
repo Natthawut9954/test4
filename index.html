@@ -74,6 +74,9 @@
             <section id="claimed-view" class="view hidden">
                 <div id="claimed-items-grid" class="items-grid"></div>
             </section>
+            <section id="reported-view" class="view hidden">
+                <div id="reported-items-grid" class="items-grid"></div>
+            </section>
 
             <section id="profile-view" class="view hidden">
                 <div id="profile-content">
@@ -95,7 +98,7 @@
         </main>
 
         <nav id="bottom-nav" class="hidden">
-            <button class="nav-btn" data-view="home-view" data-title="ของหายทั้งหมด">
+            <button class="nav-btn" data-view="home-view" data-title="รายการพบของหาย">
                 <span class="icon">🏠</span>
                 <span class="label">ทั้งหมด</span>
             </button>
@@ -107,9 +110,13 @@
                 <span class="icon">✅</span>
                 <span class="label">รับแล้ว</span>
             </button>
+            <button class="nav-btn" data-view="reported-view" data-title="รายการแจ้งของหาย">
+                <span class="icon">⚠️</span>
+                <span class="label">แจ้งของหาย</span>
+            </button>
            <button class="nav-btn" id="profile-btn" data-view="profile-view" data-title="โปรไฟล์">
-                 <span class="icon">👤</span>
-                 <span class="label">โปรไฟล์</span>
+                 <span class="icon"></span>
+                 <span class="label"></span>
             </button>
         </nav>
         
@@ -139,6 +146,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const lostItemsCollection = db.collection("lostItems");
+        const lostReportsCollection = db.collection("lostReports"); // NEW: Reference to the reported items collection
 
         // --- DOM Elements ---
         const loginModalWrapper = document.getElementById('login-modal-wrapper');
@@ -160,6 +168,7 @@
         const homeGrid = document.getElementById('home-items-grid');
         const unclaimedGrid = document.getElementById('unclaimed-items-grid');
         const claimedGrid = document.getElementById('claimed-items-grid');
+        const reportedGrid = document.getElementById('reported-items-grid'); // NEW: Grid for reported items
 
         const modalOverlay = document.getElementById('modal-overlay');
         const itemModal = document.getElementById('item-modal');
@@ -200,7 +209,8 @@
                 loginError.classList.add('hidden');
                 mainApp.classList.remove('hidden'); // แสดง main-app กลับมาเมื่อล็อกอินสำเร็จ
                 updateUIForAuthState();
-                fetchAndDisplayItems(); // Fetch data for admin
+                fetchAndDisplayItems(); // Fetch data for found items
+                fetchAndDisplayReportedItems(); // NEW: Fetch data for reported items
                 showView('home-view', 'ของหายทั้งหมด'); // Switch to admin default view
                 document.querySelector('.nav-btn[data-view="home-view"]').classList.add('active'); // Set active class for home
             } else {
@@ -276,8 +286,7 @@
             });
         });
 
-        // --- FETCH AND DISPLAY ITEMS (Admin Only) ---
-        // This function will only be called when logged in
+        // --- FETCH AND DISPLAY FOUND ITEMS (Admin Only) ---
         function fetchAndDisplayItems() {
             lostItemsCollection.orderBy('foundTimestamp', 'desc').onSnapshot(querySnapshot => {
                 homeGrid.innerHTML = '';
@@ -317,6 +326,32 @@
             });
         }
         
+        // --- NEW: FETCH AND DISPLAY REPORTED ITEMS (Admin Only) ---
+        function fetchAndDisplayReportedItems() {
+            lostReportsCollection.orderBy('reportTimestamp', 'desc').onSnapshot(querySnapshot => {
+                reportedGrid.innerHTML = '';
+
+                if (querySnapshot.empty) {
+                    const placeholder = '<p style="text-align: center; color: var(--text-secondary); margin-top: 30px;">ยังไม่มีรายการแจ้งของหาย</p>';
+                    reportedGrid.innerHTML = placeholder;
+                }
+                
+                querySnapshot.forEach(doc => {
+                    const report = doc.data();
+                    const reportId = doc.id;
+                    const cardHTML = createReportCard(report, reportId);
+                    reportedGrid.innerHTML += cardHTML;
+                });
+                
+                document.querySelectorAll('.report-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const id = card.getAttribute('data-id');
+                        showReportDetails(id);
+                    });
+                });
+            });
+        }
+        
         function getItemIcon(itemName) {
             const name = itemName.toLowerCase();
             if (name.includes('โทรศัพท์มือถือ') || name.includes('phone')) return '📱';
@@ -342,6 +377,20 @@
             `;
         }
 
+        // NEW: Function to create card for reported items
+        function createReportCard(report, id) {
+            const icon = getItemIcon(report.name);
+            return `
+                <div class="item-card report-card" data-id="${id}">
+                    <div class="icon">${icon}</div>
+                    <div class="info">
+                        <h3>${report.name}</h3>
+                        <p>${report.location || 'ไม่ระบุสถานที่'}</p>
+                    </div>
+                </div>
+            `;
+        }
+
       // --- MODAL LOGIC ---
         function showItemDetails(itemId) {
             lostItemsCollection.doc(itemId).get().then(doc => {
@@ -356,15 +405,18 @@
                         <p><strong>ผู้ที่พบ:</strong> ${item.finder}</p>
                         <p><strong>เวลาที่พบ:</strong> ${foundTime}</p>
                         <p><strong>สถานะ:</strong> ${item.status === 'unclaimed' ? 'ยังไม่มีผู้รับ' : 'รับคืนแล้ว'}</p>
+                        <div class="modal-actions">
+                            <button class="btn btn-secondary" onclick="editItem('${itemId}')">แก้ไข</button>
+                            <button class="btn btn-danger" onclick="deleteItem('${itemId}')">ลบ</button>
                     `;
                     
                     if (item.status === 'unclaimed') {
                          modalHTML += `
-                         <div class="modal-actions">
-                            <button class="btn-claim" onclick="markAsClaimed('${itemId}')">ยืนยันการรับคืน</button>
-                         </div>
+                            <button class="btn btn-primary" onclick="markAsClaimed('${itemId}')">ยืนยันการรับคืน</button>
                          `;
                     }
+
+                    modalHTML += `</div>`;
                     
                     modalContent.innerHTML = modalHTML;
                     modalOverlay.classList.remove('hidden');
@@ -372,7 +424,33 @@
                 }
             });
         }
-        // NEW: Function to show a confirmation modal
+        
+        // NEW: Function to show details of a reported item
+        function showReportDetails(reportId) {
+            lostReportsCollection.doc(reportId).get().then(doc => {
+                if (doc.exists) {
+                    const report = doc.data();
+                    const reportTime = report.reportTimestamp ? new Date(report.reportTimestamp.seconds * 1000).toLocaleString('th-TH') : 'ไม่ระบุ';
+
+                    let modalHTML = `
+                        <h3><span class="icon">${getItemIcon(report.name)}</span> ${report.name}</h3>
+                        <p><strong>รายละเอียด:</strong> ${report.description}</p>
+                        <p><strong>สถานที่ที่หาย:</strong> ${report.location}</p>
+                        <p><strong>ชื่อผู้แจ้ง:</strong> ${report.reporter}</p>
+                        <p><strong>เบอร์โทรศัพท์:</strong> ${report.phone}</p>
+                        <p><strong>เวลาที่แจ้ง:</strong> ${reportTime}</p>
+                        <div class="modal-actions">
+                            <button class="btn btn-danger" onclick="deleteReport('${reportId}')">ลบรายการ</button>
+                        </div>
+                    `;
+
+                    modalContent.innerHTML = modalHTML;
+                    modalOverlay.classList.remove('hidden');
+                    itemModal.classList.add('visible');
+                }
+            });
+        }
+        
         function showConfirmModal(title, message, onConfirmCallback) {
             modalContent.innerHTML = `
                 <h3 style="color: var(--text-color); text-align: center; margin-bottom: 20px;">${title}</h3>
@@ -418,7 +496,6 @@
         modalOverlay.addEventListener('click', closeModal);
         modalClose.addEventListener('click', closeModal);
 
-        // --- NEW: Function to show a generic info modal ---
         function showInfoModal(title, message, type = 'info') {
             let icon = '';
             let titleColor = '';
@@ -446,64 +523,46 @@
         }
 
         // Function to handle editing an item
-function editItem(itemId) {
-    // Implement logic to retrieve the item data and show an edit form.
-    // For example, you can reuse the addItemForm and pre-populate it
-    // with the current item data, then change the submit button to an "Update" button.
-    alert('ยังไม่ได้สร้างฟังก์ชันแก้ไข');
-    // ... code to show edit form and update Firestore
-}
-
-// Function to handle deleting an item
-function deleteItem(itemId) {
-    showConfirmModal(
-        'ยืนยันการลบ',
-        'คุณต้องการลบรายการนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถยกเลิกได้',
-        () => { // This is the callback function if 'ใช่' is clicked
-            lostItemsCollection.doc(itemId).delete()
-            .then(() => {
-                showInfoModal('สำเร็จ!', 'ลบรายการสิ่งของเรียบร้อยแล้ว.', 'success');
-            })
-            .catch(error => {
-                console.error("Error removing document: ", error);
-                showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถลบรายการได้: ' + error.message, 'error');
-            });
+        function editItem(itemId) {
+            alert('ยังไม่ได้สร้างฟังก์ชันแก้ไข');
         }
-    );
-}
 
-function showItemDetails(itemId) {
-    lostItemsCollection.doc(itemId).get().then(doc => {
-        if (doc.exists) {
-            const item = doc.data();
-            const foundTime = item.foundTimestamp ? new Date(item.foundTimestamp.seconds * 1000).toLocaleString('th-TH') : 'ไม่ระบุ';
-            
-            let modalHTML = `
-                <h3><span class="icon">${getItemIcon(item.name)}</span> ${item.name}</h3>
-                <p><strong>รายละเอียด:</strong> ${item.description}</p>
-                <p><strong>สถานที่พบ:</strong> ${item.location}</p>
-                <p><strong>ผู้ที่พบ:</strong> ${item.finder}</p>
-                <p><strong>เวลาที่พบ:</strong> ${foundTime}</p>
-                <p><strong>สถานะ:</strong> ${item.status === 'unclaimed' ? 'ยังไม่มีผู้รับ' : 'รับคืนแล้ว'}</p>
-                <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="editItem('${itemId}')">แก้ไข</button>
-                    <button class="btn btn-danger" onclick="deleteItem('${itemId}')">ลบ</button>
-            `;
-            
-            if (item.status === 'unclaimed') {
-                 modalHTML += `
-                    <button class="btn btn-primary" onclick="markAsClaimed('${itemId}')">ยืนยันการรับคืน</button>
-                 `;
-            }
-
-            modalHTML += `</div>`;
-            
-            modalContent.innerHTML = modalHTML;
-            modalOverlay.classList.remove('hidden');
-            itemModal.classList.add('visible');
+        // Function to handle deleting an item
+        function deleteItem(itemId) {
+            showConfirmModal(
+                'ยืนยันการลบ',
+                'คุณต้องการลบรายการนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถยกเลิกได้',
+                () => { // This is the callback function if 'ใช่' is clicked
+                    lostItemsCollection.doc(itemId).delete()
+                    .then(() => {
+                        showInfoModal('สำเร็จ!', 'ลบรายการสิ่งของเรียบร้อยแล้ว.', 'success');
+                    })
+                    .catch(error => {
+                        console.error("Error removing document: ", error);
+                        showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถลบรายการได้: ' + error.message, 'error');
+                    });
+                }
+            );
         }
-    });
-}
+        
+        // NEW: Function to handle deleting a reported item
+        function deleteReport(reportId) {
+            showConfirmModal(
+                'ยืนยันการลบ',
+                'คุณต้องการลบรายการแจ้งของหายนี้ใช่หรือไม่?',
+                () => {
+                    lostReportsCollection.doc(reportId).delete()
+                    .then(() => {
+                        showInfoModal('สำเร็จ!', 'ลบรายการแจ้งของหายเรียบร้อยแล้ว.', 'success');
+                    })
+                    .catch(error => {
+                        console.error("Error removing document: ", error);
+                        showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถลบรายการได้: ' + error.message, 'error');
+                    });
+                }
+            );
+        }
+
     </script>
     
 </body>

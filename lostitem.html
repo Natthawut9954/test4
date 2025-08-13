@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบแจ้งของหาย</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+<body>
+
+    <div id="main-app">
+        <header>
+            <h1 id="header-title">แจ้งของหาย</h1>
+        </header>
+        <main>
+            <section id="report-lost-view" class="view">
+                 <div id="report-lost-form-container">
+                    <form id="report-lost-form">
+                        <div class="form-group">
+                            <label for="lost-item-name">สิ่งของที่หาย</label>
+                            <input type="text" id="lost-item-name" placeholder="เช่น กระเป๋าสตางค์, กุญแจ" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lost-item-description">รายละเอียด</label>
+                            <textarea id="lost-item-description" class="form-group input" placeholder="เช่น สีน้ำตาลเข้ม, มีพวงกุญแจตุ๊กตาหมีติดอยู่" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="lost-item-location">สถานที่ที่คาดว่าหาย</label>
+                            <input type="text" id="lost-item-location" placeholder="เช่น โรงยิม, อาคารเรียน 2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reporter-name">ชื่อผู้แจ้ง</label>
+                            <input type="text" id="reporter-name" placeholder="ชื่อ-นามสกุล" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reporter-phone">เบอร์โทรศัพท์</label>
+                            <input type="tel" id="reporter-phone" placeholder="08XXXXXXXX" required>
+                        </div>
+                        <button type="submit" class="btn btn-submit-item">บันทึกข้อมูล</button>
+                    </form>
+                    <a href="public_view.html" class="btn" style="margin-top: 20px; text-align: center; display: block; background-color: var(--text-secondary);">ดูรายการของหายที่พบทั้งหมด</a>
+                 </div>
+            </section>
+        </main>
+    </div>
+    
+    <div id="modal-overlay" class="modal-overlay hidden"></div>
+    <div id="item-modal" class="modal">
+        <span class="modal-close">&times;</span>
+        <div id="modal-content" class="modal-content"></div>
+    </div>
+
+    <script>
+        // ================ FIREBASE CONFIGURATION =========================
+         const firebaseConfig = {
+            apiKey: "AIzaSyDaDQdwfZb_wtlDV5_0gPCjYBzXn6Gr2jw",
+            authDomain: "testing-e4682.firebaseapp.com",
+            projectId: "testing-e4682",
+            storageBucket: "testing-e4682.firebasestorage.app",
+            messagingSenderId: "729054599488",
+            appId: "1:729054599488:web:d73367a024087a00f382a5",
+            measurementId: "G-S6CLQK5MG3"
+        };
+        // =================================================================
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const lostReportsCollection = db.collection("lostReports");
+
+        // --- DOM Elements ---
+        const reportLostForm = document.getElementById('report-lost-form');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const itemModal = document.getElementById('item-modal');
+        const modalClose = document.querySelector('.modal-close');
+        const modalContent = document.getElementById('modal-content');
+
+        // --- Event Listener for Form Submission ---
+        reportLostForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            lostReportsCollection.add({
+                name: reportLostForm['lost-item-name'].value,
+                description: reportLostForm['lost-item-description'].value,
+                location: reportLostForm['lost-item-location'].value,
+                reporter: reportLostForm['reporter-name'].value,
+                phone: reportLostForm['reporter-phone'].value,
+                reportTimestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                showInfoModal('สำเร็จ!', 'บันทึกการแจ้งของหายเรียบร้อยแล้ว.', 'success');
+                reportLostForm.reset();
+            })
+            .catch((error) => {
+                console.error("Error adding document: ", error);
+                showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
+            });
+        });
+        
+        // --- MODAL LOGIC (reused from original file) ---
+        function closeModal() {
+            itemModal.classList.remove('visible');
+            modalOverlay.classList.add('hidden');
+        }
+
+        modalOverlay.addEventListener('click', closeModal);
+        modalClose.addEventListener('click', closeModal);
+        
+        function showInfoModal(title, message, type = 'info') {
+            let icon = '';
+            let titleColor = '';
+
+            if (type === 'success') {
+                icon = '✅';
+                titleColor = 'var(--primary-color)';
+            } else if (type === 'error') {
+                icon = '❌';
+                titleColor = 'var(--error-color)';
+            } else {
+                icon = 'ℹ️';
+                titleColor = 'var(--text-color)';
+            }
+
+            modalContent.innerHTML = `
+                <h3 style="color: ${titleColor}; text-align: center; display: block;">${icon} ${title}</h3>
+                <p style="text-align: center; margin-bottom: 25px;">${message}</p>
+                <div class="modal-actions" style="text-align: center;">
+                    <button class="btn btn-primary" onclick="closeModal()">ตกลง</button>
+                </div>
+            `;
+            modalOverlay.classList.remove('hidden');
+            itemModal.classList.add('visible');
+        }
+    </script>
+    
+</body>
+</html>
