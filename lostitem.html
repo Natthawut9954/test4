@@ -8,8 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
 
@@ -57,21 +55,10 @@
     </div>
 
     <script>
-        // ================ FIREBASE CONFIGURATION =========================
-         const firebaseConfig = {
-            apiKey: "AIzaSyDaDQdwfZb_wtlDV5_0gPCjYBzXn6Gr2jw",
-            authDomain: "testing-e4682.firebaseapp.com",
-            projectId: "testing-e4682",
-            storageBucket: "testing-e4682.firebasestorage.app",
-            messagingSenderId: "729054599488",
-            appId: "1:729054599488:web:d73367a024087a00f382a5",
-            measurementId: "G-S6CLQK5MG3"
-        };
+        // ================ GOOGLE APPS SCRIPT URL =========================
+        // !!! PASTE YOUR WEB APP URL HERE !!!
+        const googleAppsScriptUrl = "https://script.google.com/macros/s/AKfycbz8qstKqazIpyyf87y7DgsiCMBlBgs_eNayeF984TylCkBK7nTOl5Uv9YZZXG45ZSWp/exec"; 
         // =================================================================
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const lostReportsCollection = db.collection("lostReports");
 
         // --- DOM Elements ---
         const reportLostForm = document.getElementById('report-lost-form');
@@ -81,27 +68,41 @@
         const modalContent = document.getElementById('modal-content');
 
         // --- Event Listener for Form Submission ---
-        reportLostForm.addEventListener('submit', (e) => {
+        reportLostForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            lostReportsCollection.add({
+            const formData = {
+                id: Date.now().toString(),
                 name: reportLostForm['lost-item-name'].value,
                 description: reportLostForm['lost-item-description'].value,
                 location: reportLostForm['lost-item-location'].value,
                 reporter: reportLostForm['reporter-name'].value,
                 phone: reportLostForm['reporter-phone'].value,
-                reportTimestamp: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then(() => {
-                showInfoModal('สำเร็จ!', 'บันทึกการแจ้งของหายเรียบร้อยแล้ว.', 'success');
-                reportLostForm.reset();
-            })
-            .catch((error) => {
+                reportTimestamp: new Date().toLocaleString()
+            };
+            
+            try {
+                const response = await fetch(`${googleAppsScriptUrl}?sheet=lostReports&action=add`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showInfoModal('สำเร็จ!', 'บันทึกการแจ้งของหายเรียบร้อยแล้ว.', 'success');
+                    reportLostForm.reset();
+                } else {
+                    showInfoModal('เกิดข้อผิดพลาด!', result.message, 'error');
+                }
+            } catch (error) {
                 console.error("Error adding document: ", error);
                 showInfoModal('เกิดข้อผิดพลาด!', 'ไม่สามารถบันทึกข้อมูลได้: ' + error.message, 'error');
-            });
+            }
         });
         
-        // --- MODAL LOGIC (reused from original file) ---
+        // --- MODAL LOGIC ---
         function closeModal() {
             itemModal.classList.remove('visible');
             modalOverlay.classList.add('hidden');
